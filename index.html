@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="zh-Hant">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Ticket Bar</title>
+<style>
+  :root{
+    --bg-0:#0b0d10;
+    --bg-1:#11151a;
+    --panel:#161b21;
+    --panel-2:#1c222a;
+    --line:#262e38;
+    --text-0:#eef2f6;
+    --text-1:#9aa5b1;
+    --accent:#6fe3ff;
+    --mono:'JetBrains Mono','SF Mono',Consolas,monospace;
+    --sans:'Inter',-apple-system,'Helvetica Neue',sans-serif;
+  }
+  *{box-sizing:border-box;}
+  html,body{margin:0;padding:0;}
+  body{
+    background:
+      radial-gradient(circle at 15% 0%, rgba(111,227,255,0.07), transparent 45%),
+      radial-gradient(circle at 90% 100%, rgba(111,227,255,0.05), transparent 40%),
+      var(--bg-0);
+    color:var(--text-0);
+    font-family:var(--sans);
+    min-height:100vh;
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    padding:40px 20px 80px;
+  }
+  .top{
+    width:100%;
+    max-width:980px;
+    text-align:left;
+    margin-bottom:20px;
+  }
+  .eyebrow{
+    font-family:var(--mono);
+    font-size:11px;
+    letter-spacing:0.18em;
+    color:var(--accent);
+    text-transform:uppercase;
+    margin:0;
+    display:flex;
+    align-items:center;
+    gap:8px;
+  }
+  .eyebrow::before{
+    content:'';
+    width:6px;height:6px;
+    background:var(--accent);
+    border-radius:50%;
+    box-shadow:0 0 8px var(--accent);
+  }
+  .layout{
+    width:100%;
+    max-width:980px;
+    display:grid;
+    grid-template-columns:360px 1fr;
+    gap:24px;
+  }
+  @media (max-width:800px){
+    .layout{grid-template-columns:1fr;}
+  }
+  .card{
+    background:linear-gradient(180deg, var(--panel), var(--panel-2));
+    border:1px solid var(--line);
+    border-radius:16px;
+    padding:24px;
+  }
+  .field{margin-bottom:18px;}
+  .field:last-child{margin-bottom:0;}
+  label{
+    display:block;
+    font-size:12px;
+    font-family:var(--mono);
+    letter-spacing:0.06em;
+    color:var(--text-1);
+    text-transform:uppercase;
+    margin-bottom:8px;
+  }
+  input[type=text]{
+    width:100%;
+    background:var(--bg-1);
+    border:1px solid var(--line);
+    border-radius:10px;
+    padding:11px 13px;
+    color:var(--text-0);
+    font-size:15px;
+    font-family:var(--sans);
+    outline:none;
+    transition:border-color .15s ease, box-shadow .15s ease;
+  }
+  input[type=text]::placeholder{color:#566270;}
+  input[type=text]:focus{
+    border-color:var(--accent);
+    box-shadow:0 0 0 3px rgba(111,227,255,0.12);
+  }
+  .hint{
+    font-size:11px;
+    color:#566270;
+    margin-top:6px;
+    line-height:1.5;
+  }
+  .divider{
+    height:1px;
+    background:var(--line);
+    margin:20px 0;
+  }
+  .opt-label{
+    font-size:12px;
+    font-family:var(--mono);
+    letter-spacing:0.06em;
+    color:var(--text-1);
+    text-transform:uppercase;
+    margin-bottom:10px;
+    display:block;
+  }
+  .swatches{display:flex; gap:8px; flex-wrap:wrap;}
+  .swatch{
+    width:30px;height:30px;
+    border-radius:8px;
+    cursor:pointer;
+    border:2px solid transparent;
+    position:relative;
+    transition:transform .12s ease, border-color .12s ease;
+  }
+  .swatch:hover{transform:translateY(-2px);}
+  .swatch.active{border-color:var(--accent);}
+  .swatch.active::after{
+    content:'';
+    position:absolute; inset:-2px;
+    border-radius:10px;
+    box-shadow:0 0 0 1px var(--accent);
+  }
+  .btn{
+    width:100%;
+    padding:13px 16px;
+    border-radius:10px;
+    border:none;
+    font-family:var(--sans);
+    font-weight:600;
+    font-size:14px;
+    cursor:pointer;
+    letter-spacing:0.01em;
+    transition:transform .12s ease, box-shadow .12s ease, opacity .12s ease;
+  }
+  .btn-primary{
+    background:linear-gradient(180deg, #8aebff, var(--accent));
+    color:#072026;
+    box-shadow:0 6px 20px rgba(111,227,255,0.25);
+  }
+  .btn-primary:hover{transform:translateY(-1px); box-shadow:0 8px 24px rgba(111,227,255,0.35);}
+  .btn-primary:active{transform:translateY(0);}
+  .actions{margin-top:18px;}
+  .preview-wrap{
+    display:flex;
+    flex-direction:column;
+    align-items:center;
+    justify-content:center;
+    min-height:280px;
+  }
+  .preview-stage{
+    width:100%;
+    background:repeating-conic-gradient(#1a2026 0% 25%, #161b20 0% 50%) 50% / 22px 22px;
+    border:1px solid var(--line);
+    border-radius:14px;
+    padding:30px 18px;
+    display:flex;
+    align-items:center;
+    justify-content:center;
+    overflow:hidden;
+  }
+  canvas#ticketCanvas{
+    max-width:100%;
+    height:auto;
+    display:block;
+    filter:drop-shadow(0 18px 40px rgba(0,0,0,0.55));
+  }
+  .preview-foot{
+    width:100%;
+    display:flex;
+    align-items:center;
+    justify-content:space-between;
+    margin-top:16px;
+    font-size:12px;
+    color:var(--text-1);
+    font-family:var(--mono);
+  }
+  .dim-tag{
+    background:var(--bg-1);
+    border:1px solid var(--line);
+    border-radius:6px;
+    padding:4px 9px;
+    font-size:11px;
+  }
+  footer{
+    color:#3e4754;
+    font-size:11px;
+    font-family:var(--mono);
+    margin-top:40px;
+    text-align:center;
+  }
+</style>
+</head>
+<body>
+
+<div class="top">
+  <p class="eyebrow">Ticket Bar</p>
+</div>
+
+<div class="layout">
+
+  <div class="card">
+    <div class="field">
+      <label for="songName">歌名</label>
+      <input type="text" id="songName" placeholder="請輸入歌名">
+    </div>
+
+    <div class="field">
+      <label for="artistName">歌手</label>
+      <input type="text" id="artistName" placeholder="請輸入歌手">
+    </div>
+
+    <div class="field">
+      <label for="eventLine">場次資訊</label>
+      <input type="text" id="eventLine" placeholder="請輸入場次資訊">
+      <p class="hint">會自動依寬度縮放字級，太長也不會跑版。</p>
+    </div>
+
+    <div class="divider"></div>
+
+    <span class="opt-label">主色調</span>
+    <div class="swatches" id="tintSwatches">
+      <div class="swatch"        data-tint="red"         style="background:#e8b0b0" title="紅"></div>
+      <div class="swatch"        data-tint="wine"        style="background:#ca7272" title="酒紅"></div>
+      <div class="swatch"        data-tint="vermilion"   style="background:#e8c3b0" title="橙紅"></div>
+      <div class="swatch"        data-tint="orange"      style="background:#e8cbb0" title="橘"></div>
+      <div class="swatch"        data-tint="caramel"     style="background:#e8d3b0" title="焦糖橘"></div>
+      <div class="swatch"        data-tint="apricot"     style="background:#e8dbb0" title="杏橘"></div>
+      <div class="swatch"        data-tint="amber"       style="background:#e8e4b0" title="琥珀"></div>
+      <div class="swatch"        data-tint="gold"        style="background:#e4e8b0" title="金黃"></div>
+      <div class="swatch"        data-tint="yellow"      style="background:#dce8b0" title="黃"></div>
+      <div class="swatch"        data-tint="lemon"       style="background:#d3e8b0" title="檬黃"></div>
+      <div class="swatch"        data-tint="chartreuse"  style="background:#cbe8b0" title="黃綠"></div>
+      <div class="swatch"        data-tint="lime"        style="background:#c3e8b0" title="萊姆綠"></div>
+      <div class="swatch"        data-tint="grass"       style="background:#bbe8b0" title="草綠"></div>
+      <div class="swatch"        data-tint="fresh"       style="background:#b2e8b0" title="嫩綠"></div>
+      <div class="swatch"        data-tint="green"       style="background:#b0e8b6" title="綠"></div>
+      <div class="swatch"        data-tint="emerald"     style="background:#b0e8be" title="翠綠"></div>
+      <div class="swatch"        data-tint="mint"        style="background:#b0e8c6" title="薄荷綠"></div>
+      <div class="swatch"        data-tint="seafoam"     style="background:#b0e8cf" title="海沫綠"></div>
+      <div class="swatch"        data-tint="jade"        style="background:#b0e8d7" title="碧綠"></div>
+      <div class="swatch"        data-tint="teal"        style="background:#b0e8df" title="青綠"></div>
+      <div class="swatch"        data-tint="cyan"        style="background:#b0e8e8" title="青"></div>
+      <div class="swatch"        data-tint="aqua"        style="background:#b0e0e8" title="湖水藍"></div>
+      <div class="swatch"        data-tint="sky"         style="background:#b0d8e8" title="天藍"></div>
+      <div class="swatch"        data-tint="azure"       style="background:#b0d0e8" title="蔚藍"></div>
+      <div class="swatch"        data-tint="sapphire"    style="background:#b0c7e8" title="寶藍"></div>
+      <div class="swatch"        data-tint="cerulean"    style="background:#b0bfe8" title="湛藍"></div>
+      <div class="swatch"        data-tint="blue"        style="background:#b0b7e8" title="藍"></div>
+      <div class="swatch"        data-tint="cobalt"      style="background:#b1b0e8" title="鈷藍"></div>
+      <div class="swatch"        data-tint="blueviolet"  style="background:#bab0e8" title="藍紫"></div>
+      <div class="swatch"        data-tint="indigo"      style="background:#c2b0e8" title="紫藍"></div>
+      <div class="swatch"        data-tint="iris"        style="background:#cab0e8" title="紫羅蘭"></div>
+      <div class="swatch"        data-tint="violet"      style="background:#d2b0e8" title="紫"></div>
+      <div class="swatch"        data-tint="orchid"      style="background:#dbb0e8" title="蘭紫"></div>
+      <div class="swatch"        data-tint="purple"      style="background:#e3b0e8" title="紫紅"></div>
+      <div class="swatch"        data-tint="magenta"     style="background:#e8b0e5" title="洋紅"></div>
+      <div class="swatch"        data-tint="fuchsia"     style="background:#e8b0dd" title="桃紅"></div>
+      <div class="swatch"        data-tint="pink"        style="background:#e8b0d4" title="粉紅"></div>
+      <div class="swatch"        data-tint="rose"        style="background:#e8b0cc" title="玫紅"></div>
+      <div class="swatch"        data-tint="lightgray"   style="background:#cccccc" title="淺灰"></div>
+      <div class="swatch active" data-tint="charcoal"    style="background:#3a3d42" title="炭灰"></div>
+    </div>
+
+    <div class="divider"></div>
+
+    <div class="actions">
+      <button class="btn btn-primary" id="downloadBtn">下載圖片檔案</button>
+    </div>
+  </div>
+
+  <div class="card preview-wrap">
+    <div class="preview-stage">
+      <canvas id="ticketCanvas"></canvas>
+    </div>
+    <div class="preview-foot">
+      <span id="dimsTag" class="dim-tag">— × —</span>
+      <span>即時預覽</span>
+    </div>
+  </div>
+
+</div>
+
+<footer>RENDERED ON CANVAS · NO SERVER · PNG / ALPHA</footer>
+
+<script>
+const canvas = document.getElementById('ticketCanvas');
+const ctx = canvas.getContext('2d');
+const songInput   = document.getElementById('songName');
+const artistInput = document.getElementById('artistName');
+const eventInput  = document.getElementById('eventLine');
+const dimsTag     = document.getElementById('dimsTag');
+const FALLBACK_SONG   = 'SONG NAME';
+const FALLBACK_ARTIST = 'ARTIST';
+const FALLBACK_EVENT  = 'EVENT NAME';
+const CANVAS_W = 1500;
+const CARD_TOP    = 30;
+const CARD_MID_Y  = 200;
+const CARD_BOTTOM = 270;
+const CANVAS_H    = 300;
+const CARD_RADIUS = 30;
+let currentTint = 'charcoal';
+const TINTS = {
+  red:        { accent:'#e8b0b0', ink:'#3b1616' },
+  wine:       { accent:'#ca7272', ink:'#331515' },
+  vermilion:  { accent:'#e8c3b0', ink:'#3b2316' },
+  orange:     { accent:'#e8cbb0', ink:'#3b2816' },
+  caramel:    { accent:'#e8d3b0', ink:'#3b2e16' },
+  apricot:    { accent:'#e8dbb0', ink:'#3b3316' },
+  amber:      { accent:'#e8e4b0', ink:'#3b3816' },
+  gold:       { accent:'#e4e8b0', ink:'#393b16' },
+  yellow:     { accent:'#dce8b0', ink:'#333b16' },
+  lemon:      { accent:'#d3e8b0', ink:'#2e3b16' },
+  chartreuse: { accent:'#cbe8b0', ink:'#283b16' },
+  lime:       { accent:'#c3e8b0', ink:'#233b16' },
+  grass:      { accent:'#bbe8b0', ink:'#1d3b16' },
+  fresh:      { accent:'#b2e8b0', ink:'#183b16' },
+  green:      { accent:'#b0e8b6', ink:'#163b1a' },
+  emerald:    { accent:'#b0e8be', ink:'#163b20' },
+  mint:       { accent:'#b0e8c6', ink:'#163b25' },
+  seafoam:    { accent:'#b0e8cf', ink:'#163b2b' },
+  jade:       { accent:'#b0e8d7', ink:'#163b30' },
+  teal:       { accent:'#b0e8df', ink:'#163b35' },
+  cyan:       { accent:'#b0e8e8', ink:'#163b3b' },
+  aqua:       { accent:'#b0e0e8', ink:'#16363b' },
+  sky:        { accent:'#b0d8e8', ink:'#16313b' },
+  azure:      { accent:'#b0d0e8', ink:'#162b3b' },
+  sapphire:   { accent:'#b0c7e8', ink:'#16263b' },
+  cerulean:   { accent:'#b0bfe8', ink:'#16203b' },
+  blue:       { accent:'#b0b7e8', ink:'#161b3b' },
+  cobalt:     { accent:'#b1b0e8', ink:'#17163b' },
+  blueviolet: { accent:'#bab0e8', ink:'#1d163b' },
+  indigo:     { accent:'#c2b0e8', ink:'#22163b' },
+  iris:       { accent:'#cab0e8', ink:'#28163b' },
+  violet:     { accent:'#d2b0e8', ink:'#2d163b' },
+  orchid:     { accent:'#dbb0e8', ink:'#32163b' },
+  purple:     { accent:'#e3b0e8', ink:'#38163b' },
+  magenta:    { accent:'#e8b0e5', ink:'#3b1639' },
+  fuchsia:    { accent:'#e8b0dd', ink:'#3b1634' },
+  pink:       { accent:'#e8b0d4', ink:'#3b162e' },
+  rose:       { accent:'#e8b0cc', ink:'#3b1629' },
+  lightgray:  { accent:'#cccccc', ink:'#2e2e2e' },
+  charcoal:   { accent:'#3a3d42', ink:'#f3f3f3' }
+};
+document.querySelectorAll('#tintSwatches .swatch').forEach(swatch => {
+  swatch.addEventListener('click', () => {
+    document.querySelectorAll('#tintSwatches .swatch').forEach(s => s.classList.remove('active'));
+    swatch.classList.add('active');
+    currentTint = swatch.dataset.tint;
+    draw();
+  });
+});
+[songInput, artistInput, eventInput].forEach(input => {
+  input.addEventListener('input', draw);
+});
+function fitText(ctx, text, maxWidth, maxFontSize, minFontSize, fontWeight, fontFamily) {
+  let size = maxFontSize;
+  ctx.font = `${fontWeight} ${size}px ${fontFamily}`;
+  while (ctx.measureText(text).width > maxWidth && size > minFontSize) {
+    size -= 1;
+    ctx.font = `${fontWeight} ${size}px ${fontFamily}`;
+  }
+  return size;
+}
+function roundRectPath(ctx, x, y, w, h, r) {
+  ctx.beginPath();
+  ctx.moveTo(x + r, y);
+  ctx.lineTo(x + w - r, y);
+  ctx.arcTo(x + w, y, x + w, y + r, r);
+  ctx.lineTo(x + w, y + h - r);
+  ctx.arcTo(x + w, y + h, x + w - r, y + h, r);
+  ctx.lineTo(x + r, y + h);
+  ctx.arcTo(x, y + h, x, y + h - r, r);
+  ctx.lineTo(x, y + r);
+  ctx.arcTo(x, y, x + r, y, r);
+  ctx.closePath();
+}
+function draw() {
+  canvas.width = CANVAS_W;
+  canvas.height = CANVAS_H;
+  canvas.style.width = '100%';
+  canvas.style.maxWidth = '720px';
+  ctx.clearRect(0, 0, CANVAS_W, CANVAS_H);
+  const tint = TINTS[currentTint];
+  const cardLeft = 30;
+  const cardRight = CANVAS_W - 24;
+  const cardWidth = cardRight - cardLeft;
+  ctx.save();
+  ctx.save();
+  ctx.shadowColor = 'rgba(0,0,0,0.18)';
+  ctx.shadowBlur = 22;
+  ctx.shadowOffsetY = 8;
+  roundRectPath(ctx, cardLeft, CARD_TOP, cardWidth, CARD_BOTTOM - CARD_TOP, CARD_RADIUS);
+  ctx.fillStyle = '#ffffff';
+  ctx.fill();
+  ctx.restore();
+  ctx.save();
+  roundRectPath(ctx, cardLeft, CARD_TOP, cardWidth, CARD_BOTTOM - CARD_TOP, CARD_RADIUS);
+  ctx.clip();
+  ctx.fillStyle = '#ffffff';
+  ctx.fillRect(cardLeft, CARD_TOP, cardWidth, CARD_MID_Y - CARD_TOP);
+  ctx.fillStyle = tint.accent;
+  ctx.fillRect(cardLeft, CARD_MID_Y, cardWidth, CARD_BOTTOM - CARD_MID_Y);
+  ctx.restore();
+  roundRectPath(ctx, cardLeft, CARD_TOP, cardWidth, CARD_BOTTOM - CARD_TOP, CARD_RADIUS);
+  ctx.lineWidth = 2;
+  ctx.strokeStyle = 'rgba(0,0,0,0.85)';
+  ctx.stroke();
+  ctx.restore();
+  const textPadLeft = cardLeft + 56;
+  const textMaxWidth = (cardRight - 50) - textPadLeft;
+  const centerX = textPadLeft + textMaxWidth / 2;
+  const song   = songInput.value.trim()   || FALLBACK_SONG;
+  const artist = artistInput.value.trim() || FALLBACK_ARTIST;
+  const separator = '   |   ';
+  ctx.textBaseline = 'middle';
+  const titleFont = "'Inter', Helvetica, Arial, sans-serif";
+  const fontSize = fitText(ctx, song + separator + artist, textMaxWidth, 58, 24, 700, titleFont);
+  ctx.font = `700 ${fontSize}px ${titleFont}`;
+  const songWidth = ctx.measureText(song).width;
+  ctx.font = `400 ${fontSize * 0.8}px ${titleFont}`;
+  const sepWidth = ctx.measureText(separator).width;
+  ctx.font = `500 ${fontSize * 0.82}px ${titleFont}`;
+  const artistWidth = ctx.measureText(artist).width;
+  const totalWidth = songWidth + sepWidth + artistWidth;
+  const titleY = CARD_TOP + (CARD_MID_Y - CARD_TOP) / 2 + 2;
+  let cursorX = centerX - totalWidth / 2;
+  ctx.textAlign = 'left';
+  ctx.font = `700 ${fontSize}px ${titleFont}`;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillText(song, cursorX, titleY);
+  cursorX += songWidth;
+  ctx.font = `400 ${fontSize * 0.8}px ${titleFont}`;
+  ctx.fillStyle = 'rgba(20,22,26,0.45)';
+  ctx.fillText(separator, cursorX, titleY);
+  cursorX += sepWidth;
+  ctx.font = `500 ${fontSize * 0.82}px ${titleFont}`;
+  ctx.fillStyle = '#1a1a1a';
+  ctx.fillText(artist, cursorX, titleY);
+  const eventText = eventInput.value.trim() || FALLBACK_EVENT;
+  const bandFont = "'Inter', Helvetica, Arial, sans-serif";
+  const bandFontSize = fitText(ctx, eventText, textMaxWidth, 27, 14, 700, bandFont);
+  ctx.font = `700 ${bandFontSize}px ${bandFont}`;
+  ctx.fillStyle = tint.ink;
+  ctx.textAlign = 'center';
+  const bandTextY = CARD_MID_Y + (CARD_BOTTOM - CARD_MID_Y) / 2 + 1;
+  ctx.fillText(eventText, centerX, bandTextY);
+  dimsTag.textContent = `${CANVAS_W} × ${CANVAS_H} px`;
+}
+const EXPORT_SCALE = 2;
+function downloadPNG(scale = EXPORT_SCALE) {
+  const exportCanvas = document.createElement('canvas');
+  exportCanvas.width = canvas.width * scale;
+  exportCanvas.height = canvas.height * scale;
+  const exportCtx = exportCanvas.getContext('2d');
+  exportCtx.scale(scale, scale);
+  exportCtx.drawImage(canvas, 0, 0);
+  const songSlug = (songInput.value.trim() || 'ticket').replace(/[^a-zA-Z0-9一-龥ぁ-んァ-ヶ]/g, '_');
+  const link = document.createElement('a');
+  link.download = `${songSlug}_ticket_bar.png`;
+  link.href = exportCanvas.toDataURL('image/png');
+  link.click();
+}
+document.getElementById('downloadBtn').addEventListener('click', () => downloadPNG());
+if (document.fonts) {
+  Promise.all([
+    document.fonts.load("700 58px Inter"),
+    document.fonts.load("700 22px Inter"),
+    document.fonts.load("400 46px Inter"),
+    document.fonts.load("500 48px Inter")
+  ]).then(draw).catch(draw);
+} else {
+  draw();
+}
+window.addEventListener('load', draw);
+</script>
+
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+
+</body>
+</html>
